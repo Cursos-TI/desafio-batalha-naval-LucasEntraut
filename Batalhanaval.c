@@ -1,210 +1,173 @@
 #include <stdio.h>
 
-// Configurações do jogo - MODIFIQUE AQUI PARA ALTERAR AS POSIÇÕES
-#define TAMANHO 10          // Tamanho do tabuleiro
-#define TAMANHO_NAVIO 3     // Tamanho de cada navio
+// Configurações do tabuleiro
+#define TAMANHO 10
+#define TAMANHO_NAVIO 3
+#define TAMANHO_HABILIDADE 5
 
-// Navio horizontal (linha, coluna)
-#define H_LINHA 2
-#define H_COLUNA 3
+// Posições dos navios
+#define H_LINHA 0   // Navio horizontal (linha 0)
+#define H_COLUNA 0  // Navio horizontal (coluna 0-2)
+#define V_LINHA 3   // Navio vertical (linha 3-5)
+#define V_COLUNA 9  // Navio vertical (coluna 9)
+#define D1_LINHA 6  // Navio diagonal 1 (linha 6-8, coluna 6-8)
+#define D2_LINHA 0  // Navio diagonal 2 (linha 0-2, coluna 9-7)
 
-// Navio vertical (linha, coluna)
-#define V_LINHA 5
-#define V_COLUNA 7
+// Posições das habilidades (centros)
+#define CONE_LINHA 2
+#define CONE_COLUNA 4
+#define CRUZ_LINHA 7
+#define CRUZ_COLUNA 2
+#define OCTAEDRO_LINHA 4
+#define OCTAEDRO_COLUNA 7
 
-// Navio diagonal 1 (linha inicial)
-#define D1_LINHA 0         // Diagonal principal (linha = coluna)
-
-// Navio diagonal 2 (linha inicial)
-#define D2_LINHA 7          // Diagonal secundária (linha + coluna = 9) do maior para o menor (9 à 0)
-
-// Constantes para representação
+// Constantes numéricas para representação
 #define AGUA 0
-#define NAVIO 3
+#define NAVIO 1
+#define HABILIDADE 2
 
-// Protótipos de funções
+// Função para calcular valor absoluto
+int valor_absoluto(int num) {
+    return (num < 0) ? -num : num;
+}
+
+// Protótipos
 void inicializarTabuleiro(int tabuleiro[TAMANHO][TAMANHO]);
-void exibirTabuleiro(int tabuleiro[TAMANHO][TAMANHO]);
-int posicionarNavioHorizontal(int tabuleiro[TAMANHO][TAMANHO], int linha, int coluna);
-int posicionarNavioVertical(int tabuleiro[TAMANHO][TAMANHO], int linha, int coluna);
-int posicionarNavioDiagonal1(int tabuleiro[TAMANHO][TAMANHO], int inicio);
-int posicionarNavioDiagonal2(int tabuleiro[TAMANHO][TAMANHO], int inicio);
-int posicaoValida(int linha, int coluna);
-int celulaLivre(int tabuleiro[TAMANHO][TAMANHO], int linha, int coluna);
+void exibirTabuleiroNumerico(int tabuleiro[TAMANHO][TAMANHO]);
+int posicionarNavio(int tabuleiro[TAMANHO][TAMANHO], int linha, int coluna, int tipo);
+void criarHabilidade(int matriz[TAMANHO_HABILIDADE][TAMANHO_HABILIDADE], int tipo);
+void aplicarHabilidade(int tabuleiro[TAMANHO][TAMANHO], int habilidade[TAMANHO_HABILIDADE][TAMANHO_HABILIDADE], int linha, int coluna);
 
 int main() {
     int tabuleiro[TAMANHO][TAMANHO];
-    
-    // Inicializa o tabuleiro com água
     inicializarTabuleiro(tabuleiro);
-    
+
     printf("-----Batalha Naval-----\n");
-    printf("Posicionando navios...\n");
+    printf("Posicionando navios...\n\n");
+
+    // Posiciona navios (0-horizontal, 1-vertical, 2-diagonal1, 3-diagonal2)
+    posicionarNavio(tabuleiro, H_LINHA, H_COLUNA, 0);
+    posicionarNavio(tabuleiro, V_LINHA, V_COLUNA, 1);
+    posicionarNavio(tabuleiro, D1_LINHA, D1_LINHA, 2);
+    posicionarNavio(tabuleiro, D2_LINHA, TAMANHO-1-D2_LINHA, 3);
+
+    // Cria e aplica habilidades (1-cone, 2-cruz, 3-octaedro)
+    int habilidade[TAMANHO_HABILIDADE][TAMANHO_HABILIDADE];
     
-    // Posiciona os navios
-    int h_sucesso = posicionarNavioHorizontal(tabuleiro, H_LINHA, H_COLUNA);
-    int v_sucesso = posicionarNavioVertical(tabuleiro, V_LINHA, V_COLUNA);
-    int d1_sucesso = posicionarNavioDiagonal1(tabuleiro, D1_LINHA);
-    int d2_sucesso = posicionarNavioDiagonal2(tabuleiro, D2_LINHA);
+    criarHabilidade(habilidade, 1); // Cone
+    aplicarHabilidade(tabuleiro, habilidade, CONE_LINHA, CONE_COLUNA);
     
-    // Verifica se todos os navios foram posicionados
-    if (!h_sucesso || !v_sucesso || !d1_sucesso || !d2_sucesso) {
-        printf("\nErro ao posicionar navios! Verifique as configurações.\n");
-        return 1;
-    }
+    criarHabilidade(habilidade, 2); // Cruz
+    aplicarHabilidade(tabuleiro, habilidade, CRUZ_LINHA, CRUZ_COLUNA);
     
-    // Exibe o tabuleiro
-    exibirTabuleiro(tabuleiro);
-    
-    // Mostra as configurações usadas
-    printf("\nConfigurações usadas:\n");
-    printf("Navio Horizontal: linha %d, coluna %d\n", H_LINHA, H_COLUNA);
-    printf("Navio Vertical: linha %d, coluna %d\n", V_LINHA, V_COLUNA);
-    printf("Navio Diagonal 1: linha inicial %d (linha = coluna)\n", D1_LINHA);
-    printf("Navio Diagonal 2: linha inicial %d (linha + coluna = 9)\n", D2_LINHA);
-    
+    criarHabilidade(habilidade, 3); // Octaedro
+    aplicarHabilidade(tabuleiro, habilidade, OCTAEDRO_LINHA, OCTAEDRO_COLUNA);
+
+    printf("Tabuleiro de Batalha Naval:\n");
+    exibirTabuleiroNumerico(tabuleiro);
     return 0;
 }
 
-// Inicializa o tabuleiro com água
 void inicializarTabuleiro(int tabuleiro[TAMANHO][TAMANHO]) {
-    for (int i = 0; i < TAMANHO; i++) {
-        for (int j = 0; j < TAMANHO; j++) {
+    for(int i = 0; i < TAMANHO; i++)
+        for(int j = 0; j < TAMANHO; j++)
             tabuleiro[i][j] = AGUA;
-        }
-    }
 }
 
-// Exibe o tabuleiro formatado
-void exibirTabuleiro(int tabuleiro[TAMANHO][TAMANHO]) {
-    printf("   ");
-    printf("\nTabuleiro de Batalha Naval:\n");
-    printf("   ");
-    for (int j = 0; j < TAMANHO; j++) {
-        printf("%2d ", j); // Cabeçalho das colunas
-    }
+void exibirTabuleiroNumerico(int tabuleiro[TAMANHO][TAMANHO]) {
+    printf("\n   ");
+    for(int j = 0; j < TAMANHO; j++) printf("%2d ", j); // Cabeçalho colunas
     printf("\n");
     
-    for (int i = 0; i < TAMANHO; i++) {
+    for(int i = 0; i < TAMANHO; i++) {
         printf("%2d ", i); // Número da linha
-        for (int j = 0; j < TAMANHO; j++) {
-            printf("%2d ", tabuleiro[i][j]);
+        for(int j = 0; j < TAMANHO; j++) {
+            printf("%2d ", tabuleiro[i][j]); // Exibe valor numérico
         }
         printf("\n");
+    }
+    
+    printf("\nLegenda Numerica:\n");
+    printf(" 0 = Agua\n 1 = Navio\n 2 = Area de habilidade\n");
+}
+
+int posicionarNavio(int tabuleiro[TAMANHO][TAMANHO], int linha, int coluna, int tipo) {
+    for(int i = 0; i < TAMANHO_NAVIO; i++) {
+        int x = linha, y = coluna;
         
-    }
-}
-
-// Posiciona navio horizontal
-int posicionarNavioHorizontal(int tabuleiro[TAMANHO][TAMANHO], int linha, int coluna) {
-    // Verifica se cabe no tabuleiro
-    if (!posicaoValida(linha, coluna) || !posicaoValida(linha, coluna + TAMANHO_NAVIO - 1)) {
-        printf("Navio horizontal não cabe nas coordenadas (%d,%d)\n", linha, coluna);
-        return 0;
-    }
-    
-    // Verifica células livres
-    for (int j = coluna; j < coluna + TAMANHO_NAVIO; j++) {
-        if (!celulaLivre(tabuleiro, linha, j)) {
-            printf("Sobreposição na posição (%d,%d) do navio horizontal\n", linha, j);
+        switch(tipo) {
+            case 0: y += i; break; // Horizontal
+            case 1: x += i; break; // Vertical
+            case 2: x += i; y += i; break; // Diagonal 1
+            case 3: x += i; y -= i; break; // Diagonal 2
+        }
+        
+        if(x >= TAMANHO || y >= TAMANHO || x < 0 || y < 0 || tabuleiro[x][y] != AGUA) {
+            printf("Erro ao posicionar navio em (%d,%d)\n", linha, coluna);
             return 0;
         }
     }
     
-    // Posiciona o navio
-    for (int j = coluna; j < coluna + TAMANHO_NAVIO; j++) {
-        tabuleiro[linha][j] = NAVIO;
+    for(int i = 0; i < TAMANHO_NAVIO; i++) {
+        int x = linha, y = coluna;
+        
+        switch(tipo) {
+            case 0: y += i; break;
+            case 1: x += i; break;
+            case 2: x += i; y += i; break;
+            case 3: x += i; y -= i; break;
+        }
+        
+        tabuleiro[x][y] = NAVIO;
     }
-    
     return 1;
 }
 
-// Posiciona navio vertical
-int posicionarNavioVertical(int tabuleiro[TAMANHO][TAMANHO], int linha, int coluna) {
-    // Verifica se cabe no tabuleiro
-    if (!posicaoValida(linha, coluna) || !posicaoValida(linha + TAMANHO_NAVIO - 1, coluna)) {
-        printf("Navio vertical não cabe nas coordenadas (%d,%d)\n", linha, coluna);
-        return 0;
-    }
+void criarHabilidade(int matriz[TAMANHO_HABILIDADE][TAMANHO_HABILIDADE], int tipo) {
+    int centro = TAMANHO_HABILIDADE/2;
     
-    // Verifica células livres
-    for (int i = linha; i < linha + TAMANHO_NAVIO; i++) {
-        if (!celulaLivre(tabuleiro, i, coluna)) {
-            printf("Sobreposição na posição (%d,%d) do navio vertical\n", i, coluna);
-            return 0;
+    for(int i = 0; i < TAMANHO_HABILIDADE; i++) {
+        for(int j = 0; j < TAMANHO_HABILIDADE; j++) {
+            matriz[i][j] = 0;
+            
+            switch(tipo) {
+                case 1: // Cone
+                    if((i == 0 && j == centro) ||
+                       (i == 1 && j >= centro-1 && j <= centro+1) ||
+                       (i == 2 && j >= centro-2 && j <= centro+2) ||
+                       (i == 3 && j >= centro-1 && j <= centro+1) ||
+                       (i == 4 && j == centro))
+                        matriz[i][j] = 1;
+                    break;
+                    
+                case 2: // Cruz
+                    if(i == centro || j == centro)
+                        matriz[i][j] = 1;
+                    break;
+                    
+                case 3: // Octaedro
+                    {
+                        int dist_i = (i > centro) ? i - centro : centro - i;
+                        int dist_j = (j > centro) ? j - centro : centro - j;
+                        if(dist_i + dist_j <= centro)
+                            matriz[i][j] = 1;
+                    }
+                    break;
+            }
         }
     }
-    
-    // Posiciona o navio
-    for (int i = linha; i < linha + TAMANHO_NAVIO; i++) {
-        tabuleiro[i][coluna] = NAVIO;
-    }
-    
-    return 1;
 }
 
-// Posiciona navio na diagonal principal (linha = coluna)
-int posicionarNavioDiagonal1(int tabuleiro[TAMANHO][TAMANHO], int inicio) {
-    // Verifica se cabe no tabuleiro
-    if (inicio < 0 || inicio + TAMANHO_NAVIO - 1 >= TAMANHO) {
-        printf("Navio diagonal 1 não cabe começando em %d\n", inicio);
-        return 0;
-    }
+void aplicarHabilidade(int tabuleiro[TAMANHO][TAMANHO], int habilidade[TAMANHO_HABILIDADE][TAMANHO_HABILIDADE], int linha, int coluna) {
+    int centro = TAMANHO_HABILIDADE/2;
     
-    // Verifica células livres
-    for (int i = 0; i < TAMANHO_NAVIO; i++) {
-        int linha = inicio + i;
-        int coluna = inicio + i;
-        if (!celulaLivre(tabuleiro, linha, coluna)) {
-            printf("Sobreposição na posição (%d,%d) do navio diagonal 1\n", linha, coluna);
-            return 0;
+    for(int i = 0; i < TAMANHO_HABILIDADE; i++) {
+        for(int j = 0; j < TAMANHO_HABILIDADE; j++) {
+            int x = linha - centro + i;
+            int y = coluna - centro + j;
+            
+            if(x >= 0 && x < TAMANHO && y >= 0 && y < TAMANHO && habilidade[i][j] && tabuleiro[x][y] == AGUA)
+                tabuleiro[x][y] = HABILIDADE;
         }
     }
-    
-    // Posiciona o navio
-    for (int i = 0; i < TAMANHO_NAVIO; i++) {
-        int linha = inicio + i;
-        int coluna = inicio + i;
-        tabuleiro[linha][coluna] = NAVIO;
-    }
-    
-    return 1;
-}
-
-// Posiciona navio na diagonal secundária (linha + coluna = 9)
-int posicionarNavioDiagonal2(int tabuleiro[TAMANHO][TAMANHO], int inicio) {
-    // Verifica se cabe no tabuleiro
-    if (inicio < 0 || inicio + TAMANHO_NAVIO - 1 >= TAMANHO) {
-        printf("Navio diagonal 2 não cabe começando em %d\n", inicio);
-        return 0;
-    }
-    
-    // Verifica células livres
-    for (int i = 0; i < TAMANHO_NAVIO; i++) {
-        int linha = inicio + i;
-        int coluna = (TAMANHO - 1) - linha;
-        if (!celulaLivre(tabuleiro, linha, coluna)) {
-            printf("Sobreposição na posição (%d,%d) do navio diagonal 2\n", linha, coluna);
-            return 0;
-        }
-    }
-    
-    // Posiciona o navio
-    for (int i = 0; i < TAMANHO_NAVIO; i++) {
-        int linha = inicio + i;
-        int coluna = (TAMANHO - 1) - linha;
-        tabuleiro[linha][coluna] = NAVIO;
-    }
-    
-    return 1;
-}
-
-// Verifica se a posição está dentro do tabuleiro
-int posicaoValida(int linha, int coluna) {
-    return linha >= 0 && linha < TAMANHO && coluna >= 0 && coluna < TAMANHO;
-}
-
-// Verifica se a célula está livre (água)
-int celulaLivre(int tabuleiro[TAMANHO][TAMANHO], int linha, int coluna) {
-    return tabuleiro[linha][coluna] == AGUA;
 }
